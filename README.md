@@ -1,19 +1,23 @@
-# Devvit Mod Tool Template
+# Limegrid
 
-A template for building Reddit moderation tools using Devvit web. This template provides a complete foundation for creating custom moderation tools with bulk comment management capabilities.
+A powerful Reddit moderation suite built with Devvit. Limegrid provides advanced tools for risk scoring, presence tracking, and priority-based moderation workflows.
 
 ## Features
 
-This template includes a working mod tool called **"Mop"** that demonstrates:
+### 🛡️ Copilot
+- **Risk Scoring**: Real-time evaluation of comment risk based on multiple heuristics.
+- **Context Modal**: Deep-dive into user history and content context directly from the mod queue.
+- **Automated Insights**: AI-assisted summaries of potential policy violations.
 
-- **Bulk Comment Management**: Remove or lock multiple comments at once
-- **Thread-level Actions**: "Mop comments" - Remove/lock a comment and all its replies
-- **Post-level Actions**: "Mop post comments" - Remove/lock all comments on a post
-- **Flexible Options**:
-  - Remove comments, lock comments, or both
-  - Skip distinguished comments (moderator/admin posts)
-- **Permission Checks**: Only moderators with proper permissions can use the tool
-- **User-friendly Forms**: Interactive forms with clear options and validation
+### 👤 Presence
+- **Indicator**: Visual cues showing which moderators are active in a thread.
+- **Store Management**: Centralized state for tracking moderator actions and presence.
+- **Collaboration**: Prevent duplicate moderator actions through real-time presence sync.
+
+### 📊 Prioritizer
+- **Priority Engine**: Automatically ranks mod queue items based on urgency and risk.
+- **Dashboard**: Unified view of the most critical moderation tasks.
+- **Custom Workflows**: Configurable rules for how content is routed and prioritized.
 
 ## Tech Stack
 
@@ -24,71 +28,42 @@ This template includes a working mod tool called **"Mop"** that demonstrates:
 
 ## Getting Started
 
-1. **Clone this template** or use it as a starting point for your mod tool
-2. **Install dependencies**:
+1. **Install dependencies**:
    ```bash
-   npm install
+   pnpm install
    ```
-3. **Configure your app** in `devvit.json`:
-   - Update the app name
-   - Set your development subreddit
-4. **Start developing**:
+2. **Configure your app** in `devvit.json`.
+3. **Start developing**:
    ```bash
-   npm run dev
+   pnpm run dev
    ```
-5. **Test your changes** in your development subreddit
 
 ## Project Structure
 
+Limegrid follows a **feature-based architecture** for better scalability and modularity:
+
 ```
 src/
-├── index.ts          # Main server setup with Hono routes
-├── core/
-│   └── nuke.ts       # Core moderation logic for bulk operations
-└── routes/
-    ├── api.ts        # Public API endpoints
-    ├── forms.ts      # Form submission handlers
-    ├── menu.ts       # Context menu item handlers
-    └── triggers.ts   # App lifecycle triggers
+├── features/
+│   ├── copilot/      # Risk scoring and context analysis
+│   ├── presence/     # Real-time moderator tracking
+│   └── prioritizer/  # Moderation queue optimization
+├── shared/           # Cross-cutting types and constants
+├── index.ts          # Hono server entry point
+└── main.tsx          # Devvit UI entry point
 ```
-
-## Customizing Your Mod Tool
-
-This template is designed to be easily customizable:
-
-1. **Modify existing actions**: Edit the nuke functionality in `src/core/nuke.ts`
-2. **Add new menu items**: Update `devvit.json` and add handlers in `src/routes/menu.ts`
-3. **Create new forms**: Add form definitions and handlers in `src/routes/forms.ts`
-4. **Add API endpoints**: Extend `src/routes/api.ts` for external integrations
 
 ## Commands
 
-- `npm run dev`: Starts development mode with live reload on your test subreddit
-- `npm run build`: Builds your mod tool for production
-- `npm run deploy`: Uploads a new version of your app to Reddit
-- `npm run launch`: Publishes your app for review and public use
-- `npm run login`: Authenticates your CLI with Reddit
-- `npm run type-check`: Runs TypeScript type checking, linting, and formatting
-
-## How It Works
-
-The template demonstrates Reddit mod tool development through the "Mop" feature:
-
-1. **Context Menu Integration**: Click on the Mod Shield icon in a comment to see custom mod actions
-2. **Permission Validation**: Automatically checks if the user has moderation permissions
-3. **Interactive Forms**: Presents options through Reddit's native form system
-4. **Reddit API**: Processes multiple comments using Reddit's API
+- `pnpm run dev`: Starts development mode with live reload.
+- `pnpm run build`: Builds the application for production.
+- `pnpm run deploy`: Uploads a new version to Reddit.
+- `pnpm run type-check`: Runs TypeScript type checking and linting.
 
 ## Development Notes
 
-- **Permissions**: The app requires `reddit: true` permission to access Reddit's API
-- **User Types**: Menu items are restricted to `moderator` user type
+- **Permissions**: Requires `reddit: true` for API access.
+- **Mod Priority**: Designed for subreddits with high volume and multiple active moderators.
 
-## Deployment
-
-1. Test thoroughly in your development subreddit
-2. Run `npm run deploy` to upload your app
-3. Use `npm run launch` to submit for Reddit's app review process
-4. Once approved, users can install your mod tool from Reddit's app directory
-
-This template provides everything you need to build powerful, user-friendly moderation tools for Reddit communities.
+---
+Built with ❤️ by Yellow Labs.
