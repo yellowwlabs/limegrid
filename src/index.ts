@@ -1,20 +1,24 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { createServer, getServerPort } from '@devvit/web/server';
-import { api } from './routes/api';
-import { forms } from './routes/forms';
-import { menu } from './routes/menu';
-import { triggers } from './routes/triggers';
+import { presenceApi } from './features/presence/api/presenceApi';
+import { priorityApi } from './features/prioritizer/api/priorityApi';
+import { copilotApi } from './features/copilot/api/copilotApi';
 
 const app = new Hono();
-const internal = new Hono();
 
-internal.route('/menu', menu);
-internal.route('/form', forms);
-internal.route('/triggers', triggers);
+// Middleware to inject KV and other Devvit tools into Hono context
+app.use('*', async (c, next) => {
+  // @ts-expect-error - devvit context is injected by createServer
+  c.env = c.req.raw.context;
+  await next();
+});
 
-app.route('/api', api);
-app.route('/internal', internal);
+app.route('/api/presence', presenceApi);
+app.route('/api/priority', priorityApi);
+app.route('/api/copilot', copilotApi);
+
+app.get('/', (c) => c.text('Limgrid API is live!'));
 
 serve({
   fetch: app.fetch,
