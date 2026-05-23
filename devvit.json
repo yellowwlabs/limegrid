@@ -12,15 +12,14 @@
     "items": []
   },
   "forms": {},
-  "triggers": {
-    "onAppInstall": "/internal/triggers/on-app-install"
-  },
+  "triggers": {},
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch"
   },
   "permissions": {
-    "reddit": true
+    "reddit": true,
+    "redditCustomPost": true
   },
   "dev": {
     "subreddit": "limegrid_dev"

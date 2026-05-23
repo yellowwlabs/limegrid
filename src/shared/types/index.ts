@@ -9,6 +9,14 @@ export interface PriorityScore {
   predictedRule?: string;
   isEdgeCase: boolean;
   scoredAt: number;
+  metadata?: {
+    title: string;
+    author: string;
+    subreddit: string;
+    score: number;
+    numComments: number;
+    permalink: string;
+  };
 }
 
 export interface PresenceState {
