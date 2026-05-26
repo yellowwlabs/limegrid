@@ -4,6 +4,8 @@ import { PriorityScore } from './shared/types';
 import { PriorityEngine } from './features/prioritizer/services/priorityEngine';
 import { Post } from '@devvit/public-api';
 
+const LOCKED_POST_KEY_PREFIX = 'limgrid:locked-post:';
+
 Devvit.configure({
   redditAPI: true,
   kvStore: true,
@@ -18,7 +20,7 @@ Devvit.addMenuItem({
   location: 'post',
   label: 'Limgrid: Quick Review',
   onPress: async (_, context) => {
-    context.ui.showForm(reviewForm);
+    context.ui.showForm(reviewForm, { itemId: context.postId ?? '' });
   },
 });
 
@@ -130,6 +132,33 @@ Devvit.addCustomPostType({
   },
 });
 
+Devvit.addTrigger({
+  event: 'CommentSubmit',
+  async onEvent(event, context) {
+    const postId = normalizePostId(event.comment?.postId || event.post?.id || '');
+    if (!postId) return;
+
+    const isLimgridLocked = await isPostMarkedLocked(context.kvStore, postId);
+    const isRedditLocked = event.post?.isLocked ?? false;
+    if (!isLimgridLocked && !isRedditLocked) return;
+
+    const commentId = normalizeCommentId(event.comment?.id || '');
+    if (!commentId) return;
+
+    await context.reddit.remove(commentId, false);
+
+    if (event.author?.name && event.subreddit?.name) {
+      await context.reddit.addModNote({
+        subreddit: event.subreddit.name,
+        user: event.author.name,
+        redditId: commentId as `t1_${string}`,
+        label: 'ABUSE_WARNING',
+        note: 'Removed comment submitted after post comments were locked.',
+      });
+    }
+  },
+});
+
 // Global Review Form
 const reviewForm = Devvit.createForm(
   (data) => {
@@ -149,8 +178,11 @@ const reviewForm = Devvit.createForm(
           type: 'select',
           options: [
             { label: 'Remove (Rule 1)', value: 'remove_1' },
+            { label: 'Remove + Lock Comments', value: 'remove_lock' },
             { label: 'Warn User', value: 'warn' },
             { label: 'Approve', value: 'approve' },
+            { label: 'Lock Comments', value: 'lock_comments' },
+            { label: 'Unlock Comments', value: 'unlock_comments' },
           ],
         },
         {
@@ -164,11 +196,124 @@ const reviewForm = Devvit.createForm(
   },
   async (values, context) => {
     const rawValues = values as Record<string, unknown>;
-    const itemId = (rawValues.itemId as string) || 'unknown';
+    const itemId = (rawValues.itemId as string) || context.postId || '';
     const action = (rawValues.action as string[])?.[0] || 'none';
     console.log('Form submitted:', { itemId, action });
-    context.ui.showToast(`Moderation action '${action}' applied to ${itemId}!`);
+
+    if (!itemId) {
+      context.ui.showToast('No post or comment ID found for this action.');
+      return;
+    }
+
+    try {
+      await applyModerationAction(itemId, action, context);
+      context.ui.showToast(`Moderation action '${action}' applied to ${itemId}!`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Moderation action failed:', { itemId, action, error });
+      context.ui.showToast(`Action failed: ${message}`);
+    }
   }
 );
+
+async function applyModerationAction(
+  itemId: string,
+  action: string,
+  context: Devvit.Context
+): Promise<void> {
+  switch (action) {
+    case 'approve':
+      await context.reddit.approve(itemId);
+      return;
+    case 'remove_1':
+      await context.reddit.remove(itemId, false);
+      return;
+    case 'remove_lock':
+      await context.reddit.remove(itemId, false);
+      await setPostCommentsLocked(itemId, context, true);
+      return;
+    case 'lock_comments':
+      await setPostCommentsLocked(itemId, context, true);
+      return;
+    case 'unlock_comments':
+      await setPostCommentsLocked(itemId, context, false);
+      return;
+    case 'warn':
+      return;
+    default:
+      throw new Error('Select a moderation action first.');
+  }
+}
+
+async function setPostCommentsLocked(
+  itemId: string,
+  context: Devvit.Context,
+  locked: boolean
+): Promise<void> {
+  const postId = await getPostIdForItem(itemId, context);
+  const post = await context.reddit.getPostById(postId);
+
+  if (locked) {
+    await post.lock();
+    await markPostLocked(context.kvStore, postId);
+    return;
+  }
+
+  await post.unlock();
+  await unmarkPostLocked(context.kvStore, postId);
+}
+
+async function getPostIdForItem(
+  itemId: string,
+  context: Devvit.Context
+): Promise<string> {
+  if (itemId.startsWith('t3_')) {
+    return itemId;
+  }
+
+  if (itemId.startsWith('t1_')) {
+    const comment = await context.reddit.getCommentById(itemId);
+    return comment.postId;
+  }
+
+  if (/^[a-z0-9]+$/i.test(itemId)) {
+    return `t3_${itemId}`;
+  }
+
+  throw new Error('Expected a post ID or comment ID.');
+}
+
+async function markPostLocked(
+  kvStore: Devvit.Context['kvStore'],
+  postId: string
+): Promise<void> {
+  await kvStore.put(`${LOCKED_POST_KEY_PREFIX}${postId}`, true);
+}
+
+async function unmarkPostLocked(
+  kvStore: Devvit.Context['kvStore'],
+  postId: string
+): Promise<void> {
+  await kvStore.delete(`${LOCKED_POST_KEY_PREFIX}${postId}`);
+}
+
+async function isPostMarkedLocked(
+  kvStore: Devvit.Context['kvStore'],
+  postId: string
+): Promise<boolean> {
+  return (await kvStore.get<boolean>(`${LOCKED_POST_KEY_PREFIX}${postId}`)) === true;
+}
+
+function normalizePostId(id: string): string {
+  if (!id) return '';
+  if (id.startsWith('t3_')) return id;
+  return `t3_${id}`;
+}
+
+function normalizeCommentId(id: string): string {
+  if (!id) return '';
+  if (id.startsWith('t1_')) return id;
+  return `t1_${id}`;
+}
 
 export default Devvit;
