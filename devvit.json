@@ -1,6 +1,6 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "limegrid",
+  "name": "limegrids",
   "blocks": {
     "entry": "src/main.tsx"
   },
@@ -18,8 +18,7 @@
     "dev": "vite build --watch"
   },
   "permissions": {
-    "reddit": true,
-    "redditCustomPost": true
+    "reddit": true
   },
   "dev": {
     "subreddit": "limegrid_dev"
